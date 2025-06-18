@@ -1,0 +1,1 @@
+asyncapi generate fromTemplate ./api/asyncapi/spec.yaml @asyncapi/html-template@3.0.0 -o ./api/asyncapi/doc --use-new-generator

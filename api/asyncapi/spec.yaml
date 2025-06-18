@@ -1,0 +1,295 @@
+asyncapi: 3.0.0
+info:
+  title: MT4 API
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    host: nats://localhost:4222
+    protocol: nats
+    description: Development NATS server
+
+channels:
+  "trading.request":
+    address: trading.request
+    messages:
+      orderExecuteRequest:
+        $ref: "#/components/messages/TradingRequest"
+      orderExecuteResponse:
+        $ref: "#/components/messages/TradingResponse"
+    bindings:
+      nats:
+        queue: server_name.mt4_trade_requests
+  "tick.updates":
+    address: tick.updates
+    messages:
+      tickUpdate:
+        $ref: "#/components/messages/TickUpdate"
+    bindings:
+      nats:
+        queue: server_name.mt4_ticks.symbol_name
+  "chart.requests":
+    address: chart.requests
+    messages:
+      chartRequest:
+        $ref: "#/components/messages/ChartRequest"
+      chartResponse:
+        $ref: "#/components/messages/ChartResponse"
+    bindings:
+      nats:
+        queue: server_name.mt4_chart_requests
+
+operations:
+  executeOrder:
+    action: send
+    channel:
+      $ref: "#/channels/trading.request"
+    messages:
+      - $ref: "#/channels/trading.request/messages/orderExecuteRequest"
+    reply:
+      channel:
+        $ref: "#/channels/trading.request"
+      messages:
+        - $ref: "#/channels/trading.request/messages/orderExecuteResponse"
+  tickUpdate:
+    action: send
+    channel:
+      $ref: "#/channels/tick.updates"
+    messages:
+      - $ref: "#/channels/tick.updates/messages/tickUpdate"
+  chartRequest:
+    action: send
+    channel:
+      $ref: "#/channels/chart.requests"
+    messages:
+      - $ref: "#/channels/chart.requests/messages/chartRequest"
+    reply:
+      channel:
+        $ref: "#/channels/chart.requests"
+      messages:
+        - $ref: "#/channels/chart.requests/messages/chartResponse"
+
+components:
+  messages:
+    TradingRequest:
+      name: orderExecuteRequest
+      title: Order Execute Request
+      contentType: application/json
+      summary: Request to execute a trading order (New/Modify/Cancel)
+      description: Contains all the necessary information to execute a trading order
+      payload:
+        $ref: "#/components/schemas/TradingRequest"
+
+    TradingResponse:
+      name: orderExecuteResponse
+      title: Order Execute Response
+      contentType: application/json
+      summary: Response to an order execution request
+      description: Contains the result of the order execution request including order id, status, and execution details
+      payload:
+        $ref: "#/components/schemas/TradingResponse"
+
+    TickUpdate:
+      name: tickUpdate
+      title: Tick Update
+      contentType: application/json
+      summary: Real-time update of market tick data
+      description: Contains the latest bid and ask prices for a trading instrument
+      payload:
+        $ref: "#/components/schemas/TickUpdate"
+
+    ChartRequest:
+      name: chartRequest
+      title: Chart Request
+      contentType: application/json
+      summary: Request for historical chart data
+      description: Contains parameters to request historical chart data for a specific trading instrument and period
+      payload:
+        $ref: "#/components/schemas/ChartRequest"
+
+    ChartResponse:
+      name: chartResponse
+      title: Chart Response
+      contentType: application/json
+      summary: Response containing historical chart data
+      description: Contains the requested historical chart data including candles for a specific trading instrument and period
+      payload:
+        $ref: "#/components/schemas/ChartResponse"
+    
+  schemas:
+    TradingRequest:
+      type: object
+      required:
+        - login
+        - symbol
+        - cmd
+        - volume
+      properties:
+        type:
+          type: string
+          enum: [New, Modify, Cancel]
+          description: Type of order request
+          example: New
+        login:
+          type: integer
+          description: User login ID
+          example: 12345
+        symbol:
+          type: string
+          description: Trading instrument symbol
+          example: "EURUSD"
+        cmd:
+          type: integer
+          enum: [OP_BUY, OP_SELL, OP_BUY_LIMIT, OP_SELL_LIMIT, OP_BUY_STOP, OP_SELL_STOP]
+          description: |
+            Order command type:
+            OP_BUY - Market buy
+            OP_SELL - Market sell
+            OP_BUY_LIMIT - Buy limit
+            OP_SELL_LIMIT - Sell limit
+            OP_BUY_STOP - Buy stop
+            OP_SELL_STOP - Sell stop
+          example: OP_BUY
+        volume:
+          type: integer
+          description: Order volume in lots * 100, e.g., 0.01 lot = 1, 1 lot = 100
+          example: 100
+        price:
+          type: number
+          format: double
+          description: Order price (not used for market orders)
+          example: 1.10234
+        sl:
+          type: number
+          format: double
+          description: Stop loss price
+          example: 1.09500
+        tp:
+          type: number
+          format: double
+          description: Take profit price
+          example: 1.12000
+        comment:
+          type: string
+          description: Order comment
+          example: "API order"
+        expiration:
+          type: integer
+          format: int32
+          description: Order expiration timestamp (Unix time)
+          example: 1687096800
+
+    TradingResponse:
+      type: object
+      required:
+        - errorCode
+      errorCode:
+        type: integer
+        description: Error code (0 for success, non-zero for errors)
+        example: 0
+
+    TickUpdate:
+      type: object
+      required:
+        - symbol
+        - bid
+        - ask
+      properties:
+        symbol:
+          type: string
+          description: Trading instrument symbol
+          example: "EURUSD"
+        bid:
+          type: number
+          format: double
+          description: Current bid price
+          example: 1.10234
+        ask:
+          type: number
+          format: double
+          description: Current ask price
+          example: 1.10250
+        timestamp:
+          type: integer
+          format: int32
+          description: Timestamp of the tick update (Unix time)
+          example: 1687096800
+
+    ChartRequest:
+      type: object
+      required:
+        - symbol
+        - period
+      properties:
+        symbol:
+          type: string
+          description: Trading instrument symbol
+          example: "EURUSD"
+        period:
+          type: string
+          enum: [M1, M5, M15, M30, H1, H4, D1, W1, MN]
+          description: Chart period
+          example: M1
+        startTime:
+          type: integer
+          format: int32
+          description: Start time for the chart data (Unix time)
+          example: 1687096800
+        endTime:
+          type: integer
+          format: int32
+          description: End time for the chart data (Unix time)
+          example: 1687183200
+    
+    ChartResponse:
+      type: object
+      required:
+        - symbol
+        - candles
+      properties:
+        symbol:
+          type: string
+          description: Trading instrument symbol
+          example: "EURUSD"
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candle"
+
+    Candle:
+      type: object
+      required:
+        - time
+        - open
+        - high
+        - low
+        - close
+      properties:
+        time:
+          type: integer
+          format: int32
+          description: Candle time (Unix time)
+          example: 1687096800
+        open:
+          type: number
+          format: double
+          description: Open price of the candle
+          example: 1.10200
+        high:
+          type: number
+          format: double
+          description: High price of the candle
+          example: 1.10500
+        low:
+          type: number
+          format: double
+          description: Low price of the candle
+          example: 1.10000
+        close:
+          type: number
+          format: double
+          description: Close price of the candle
+          example: 1.10300
