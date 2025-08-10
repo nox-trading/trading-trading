@@ -1,0 +1,8 @@
+LIBRARY mt4api
+
+EXPORTS
+    MtSrvAbout
+    MtSrvStartup
+    MtSrvGroupsAdd
+    MtSrvSymbolsAdd
+    MtSrvHistoryTickApply
