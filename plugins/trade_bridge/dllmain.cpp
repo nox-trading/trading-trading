@@ -2,11 +2,11 @@
 
 #include "plugin.h"
 #include "logger.h"
+#include "ini.h"
 
 #include "mt4.h"
 
 const PluginInfo plugin_info { "mt4api", 100, "", {0}, };
-CServerInterface* mt4server{ nullptr };
 
 mt4::logger::uptr_t mt4logger { nullptr };
 mt4::plugin::uptr_t mt4plugin { nullptr };
@@ -47,22 +47,27 @@ int APIENTRY MtSrvStartup(CServerInterface* server)
 
     if (server != nullptr)
     {
-        mt4server = server;
-
-		mt4logger = std::make_unique<mt4::logger>(plugin_info.name, mt4server);
+		mt4logger = std::make_unique<mt4::logger>(plugin_info.name, server);
         if (server->Version() != ServerApiVersion)
         {
             mt4logger->log_error("Server API version mismatch: expected {}, got {}", ServerApiVersion, server->Version());
             return(FALSE);
         }
 
-        mt4plugin = std::make_unique<mt4::plugin>(
-            plugin_info.name,
-            "test1",
-            "nats://localhost:4222",
-            mt4server,
-            2 // thread pool size
-        );
+        auto mt4plugin_result = mt4::plugin::initialize(server, plugin_info.name);
+        if (!mt4plugin_result)
+        {
+            mt4logger->log_error("Failed to initialize plugin: {}", mt4plugin_result.error());
+            return(FALSE);
+		}
+	    mt4plugin = std::move(mt4plugin_result.value());
+
+        //    plugin_info.name,
+        //    "test1",
+        //    "nats://localhost:4222",
+        //    server,
+        //    2 // thread pool size
+        //);
 		//mt4plugin->publish_chart(0);
 
         return(TRUE);
@@ -75,7 +80,20 @@ void APIENTRY MtSrvCleanup()
 	mt4logger->log_info("Unloading plugin, cleaning up resources");
     mt4plugin.reset();
     mt4logger.reset();
-	mt4server = nullptr;
+}
+
+int APIENTRY MtSrvPluginCfgSet(const PluginCfg* values, const int total)
+{
+    if (mt4plugin)
+    {
+        for (int i = 0; i < total; ++i)
+        {
+            const PluginCfg& cfg = values[i];
+            mt4logger->log_info("Setting plugin configuration: {} = {}", cfg.name, cfg.value);
+            // Here you can handle the configuration settings as needed
+        }
+    }
+    return (TRUE);
 }
 
 int APIENTRY MtSrvGroupsAdd(const ConGroup* group)

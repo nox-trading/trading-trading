@@ -14,6 +14,9 @@ namespace mt4
 
 	struct group_symbol;
 	json_t to_json(const group_symbol&);
+
+	struct trade_request;
+	trade_request from_json(const json_t& j);
 }
 
 json_t to_json(const FeedTick&);

@@ -155,6 +155,7 @@
     <None Include="plugin.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ini.h" />
     <ClInclude Include="json.h" />
     <ClInclude Include="logger.h" />
     <ClInclude Include="models.h" />

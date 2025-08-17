@@ -7,9 +7,7 @@ namespace mt4
 	struct candle
 	{
 		std::string symbol;
-		int			period;
-
-		int32_t timestamp;
+		int32_t ts;
 		double open;
 		double high;
 		double low;
@@ -38,5 +36,31 @@ namespace mt4
 		int             lot_min;
 		int				lot_max;
 		int             lot_step;
+	};
+
+	struct trade_request
+	{
+		enum order_side
+		{
+			BUY,
+			SELL
+		};
+
+		int				request_id;
+		order_side		side;
+		int				login;
+		double			volume;
+		double			sl;
+		double			tp;
+		std::string		symbol;
+		std::string		comment;
+	};
+
+	struct trade_response
+	{
+		int				request_id;
+		int				order_id;
+		int				reject_code;
+		std::string		reject_message;
 	};
 }

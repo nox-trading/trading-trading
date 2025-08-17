@@ -3,6 +3,7 @@ LIBRARY mt4api
 EXPORTS
     MtSrvAbout
     MtSrvStartup
+    MtSrvPluginCfgSet
     MtSrvGroupsAdd
     MtSrvSymbolsAdd
     MtSrvHistoryTickApply
